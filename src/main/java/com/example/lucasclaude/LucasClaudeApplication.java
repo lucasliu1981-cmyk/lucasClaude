@@ -2,6 +2,7 @@ package com.example.lucasclaude;
 
 import org.springaicommunity.agent.tools.FileSystemTools;
 import org.springaicommunity.agent.tools.ShellTools;
+import org.springaicommunity.agent.utils.AgentEnvironment;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
@@ -10,10 +11,12 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.deepseek.DeepSeekChatModel;
 import org.springframework.ai.session.advisor.SessionMemoryAdvisor;
 import org.springframework.ai.tool.ToolCallbackProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.io.Resource;
 import reactor.core.publisher.Flux;
 
 import java.util.Scanner;
@@ -36,13 +39,21 @@ public class LucasClaudeApplication {
                                         ChatMemory chatMemory,
                                         SessionMemoryAdvisor sessionMemorySummarizationAdvisor,
                                         ToolService toolService,
-                                        ToolCallbackProvider toolCallbackProvider)
+                                        ToolCallbackProvider toolCallbackProvider,
+                                        @Value("classpath:/prompt/MAIN_AGENT_SYSTEM_PROMPT_V2.md") Resource agentSystemPrompt)
     {
         return args -> {
 
             //动态修改模型参数
             //对话代理（记忆、advisor大模型对话拦截器、结构化输出...)
             ChatClient chatClient= ChatClient.builder(deepSeekChatModel)
+                    //角色预设
+//                    .defaultSystem(systemPrompt)
+                    .defaultSystem(p -> p.text(agentSystemPrompt)
+                            .param(AgentEnvironment.ENVIRONMENT_INFO_KEY, AgentEnvironment.info())
+                            .param(AgentEnvironment.GIT_STATUS_KEY, AgentEnvironment.gitStatus())
+                            .param(AgentEnvironment.AGENT_MODEL_KEY, deepSeekChatModel)
+                            .param(AgentEnvironment.AGENT_MODEL_KNOWLEDGE_CUTOFF_KEY, "unknown"))
                     //对话记忆，用于保存对话历史，此处是默认的，保存在jvm内存中
                     .defaultAdvisors(
                             //MessageChatMemoryAdvisor.builder(chatMemory).build()
